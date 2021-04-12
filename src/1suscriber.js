@@ -24,4 +24,13 @@ const payload = JSON.stringify({
 
 client.on('connect', function () {
   client.publish(`prueba/blueGateway/v2/connection/${farmId}`, payload, { qos: 2 });
+  console.log("ya publique");
 })
+
+client.on('offline', () => {
+  console.log('offline');
+});
+
+client.on('error', (err) => {
+  console.log('err: ', err);
+});
