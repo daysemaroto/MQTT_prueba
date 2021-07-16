@@ -2,19 +2,14 @@ var mqtt = require('mqtt')
 var client = mqtt.connect('mqtt://test.mosquitto.org')
 const log = require('debug')('bcg:log');
 
-
-
 const arrTopics = [
   `prueba/blueGateway/connection`,
 ];
 
+const subsOptions = {
+  qos: 2,
+};
 
-const payload = JSON.stringify({
-  farmId,
-  bluegatewayName,
-  connection: 'ONLINE',
-  lastDate: dayjs().format('YYYY-MM-DD HH:mm:ss.SSS'),
-});
 
 client.on('connect', function () {
   client.subscribe(arrTopics, subsOptions, (err, granted) => {
