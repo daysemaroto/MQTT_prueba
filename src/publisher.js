@@ -3,7 +3,7 @@ var client = mqtt.connect('mqtt://test.mosquitto.org')
 const log = require('debug')('bcg:log');
 
 const arrTopics = [
-  `prueba/blueGateway/connection`,
+  `prueba/blueGateway/v2/connection/+`,
 ];
 
 const subsOptions = {

@@ -6,13 +6,12 @@ var client = mqtt.connect('mqtt://test.mosquitto.org', {
   clean: false,
   reconnectPeriod: 15000,
   will: {
-    topic: 'prueba/blueGateway/connection',
+    topic: `prueba/blueGateway/v2/connection/${farmId}`,
     payload: JSON.stringify({
       farmId,
       connection: 'OFFLINE',
     }),
     qos: 2,
-    retain: true,
   },
 })
 
@@ -24,5 +23,5 @@ const payload = JSON.stringify({
 });
 
 client.on('connect', function () {
-  client.publish('prueba/blueGateway/connection', payload, { qos: 2, retain: true });
+  client.publish(`prueba/blueGateway/v2/connection/${farmId}`, payload, { qos: 2 });
 })
