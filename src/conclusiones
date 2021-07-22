@@ -1,0 +1,15 @@
+conclusiones
+1. si no hay internet no puede hacer publish
+    por eso es que cada vez que se trataba de hacer connect el GW salia en el log offline, y no realizaba la publicacion de ONLINE
+2. si un GW no tiene internet si llega la notificacion de OFFLINE al API, con un retraso de 35 segundos a 60 segundos.
+3. si un GW se desconecta bruscamente (se mata el proceso) el mensaje llega inmediatamente al API.
+4. Si el API tiene una fecha diferente a la que tiene un GW, no influye en el comportamiento del Broker MQTT, 
+igualmente le llegan las notificaciones al API de OFFLINE.
+5. Si el programa inicio correctamente y se va el internet despues de un tiempo de haber estado trabajando normalmente,
+ el log de offline del MQTT Broker sale hasta despues de 1 minuto, tanto en el log como en el API.
+6. Si el programa inicia directamente sin tener acceso al internet el log de offline del MQTT Broker sale inmediatamente. 
+
+Soluciones:
+- Al momento en que esté offline el broker mqtt en el GW matar el proceso para que la notificación llegue de forma inmediata al API.
+- Al inicio cuando se esté incializando el GW y esté tratando de sincronizar la hora, esperar hasta que ese proceso acabe, para continuar, porque despues no podrá enviar ningun peiticion al API porque puede tener la hora desincronizada.
+- Si es que falla el proceso sincronizar la hora y el MQTT broker se conecta (porque igualmente se conecta si hay internet pese a que la hora tenga mal),  enviar la hora con la que está trabajando el GW en la notificación de slack para darnos cuenta con que hora está trabajando ese GW que se volvió a conectar.

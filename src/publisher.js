@@ -26,3 +26,12 @@ client.on('message', function (topic, message) {
   console.log('topic:  ', topic, 'message:  ', message.toString())
   //   client.end()
 })
+
+console.log("Escribe tu nombre");
+var stdin = process.openStdin();
+
+stdin.addListener("data", (e) => {
+  client.publish('blueGateway/1/feeder/diable/set', e.toString().trim(), { qos: 2 });
+  // console.log("Tu nombre es: " + 
+    //     d.toString().trim());
+  });

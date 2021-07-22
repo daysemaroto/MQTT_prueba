@@ -15,6 +15,17 @@ var client = mqtt.connect('mqtt://test.mosquitto.org', {
   },
 })
 
+const subsOptions = {
+  qos: 2,
+};
+
+const arrTopics = [
+  `blueGateway/${farmId}/feeder/diable/set`,
+  `blueGateway/${farmId}/feeder/dayProgram/set`,
+  `blueGateway/${farmId}/feeder/emptyDayProgram/set`,
+  `blueGateway/${farmId}/feeder/battery/get`,
+  `blueGateway/${farmId}/feeder/testFeeding`,
+];
 
 const payload = JSON.stringify({
   farmId,
@@ -25,10 +36,18 @@ const payload = JSON.stringify({
 client.on('connect', function () {
   client.publish(`prueba/blueGateway/v2/connection/${farmId}`, payload, { qos: 2 });
   console.log("ya publique");
+  client.subscribe(arrTopics, subsOptions, (err, granted) => {
+    if (err) {
+      console.log('subscribe error: ', err);
+    } else {
+      console.log('subscribe granted: %O', granted);
+    }
+  });
 })
 
 client.on('offline', () => {
   console.log('offline');
+  // process.exit();
 });
 
 client.on('error', (err) => {
