@@ -1,15 +1,417 @@
+Pruebas realizadas con una laptop en una fecha desactualizada y otra laptop simulando al API con la fecha actual.
 conclusiones
-1. si no hay internet no puede hacer publish
+1. si no tiene internet el GW no puede hacer publish
     por eso es que cada vez que se trataba de hacer connect el GW salia en el log offline, y no realizaba la publicacion de ONLINE
-2. si un GW no tiene internet si llega la notificacion de OFFLINE al API, con un retraso de 35 segundos a 60 segundos.
+2. si un GW no tiene internet si llega la notificacion de OFFLINE al API, con un retraso de 35 segundos a 60 segundos aproximadamente.
 3. si un GW se desconecta bruscamente (se mata el proceso) el mensaje llega inmediatamente al API.
 4. Si el API tiene una fecha diferente a la que tiene un GW, no influye en el comportamiento del Broker MQTT, 
 igualmente le llegan las notificaciones al API de OFFLINE.
-5. Si el programa inicio correctamente y se va el internet despues de un tiempo de haber estado trabajando normalmente,
+5. Si el GW inició correctamente y se va el internet despues de un tiempo de haber estado trabajando normalmente,
  el log de offline del MQTT Broker sale hasta despues de 1 minuto, tanto en el log como en el API.
-6. Si el programa inicia directamente sin tener acceso al internet el log de offline del MQTT Broker sale inmediatamente. 
+6. Si el GW inicia directamente sin tener acceso al internet el log de offline del MQTT Broker sale inmediatamente. 
+7. Si el API publica un mensaje al GW, y el GW está sin internet no le llega este mensaje hasta que vuelva a tener acceso a internet, es en este momento en que comienza a recibir los mensajes que le envió el API.
+8. Si el API publica un mensaje al GW, y el GW está muerto (el pm2 está detenido), estos mensajes se pierden.
 
 Soluciones:
-- Al momento en que esté offline el broker mqtt en el GW matar el proceso para que la notificación llegue de forma inmediata al API.
+- Al momento en que esté offline el broker mqtt en el GW matar el proceso para que la notificación llegue de forma inmediata al API ( no recomendable, porque el pm2 trataría de empezar nuevamente, desperdiciando recursos de memoria).
+(inserta foto)
 - Al inicio cuando se esté incializando el GW y esté tratando de sincronizar la hora, esperar hasta que ese proceso acabe, para continuar, porque despues no podrá enviar ningun peiticion al API porque puede tener la hora desincronizada.
 - Si es que falla el proceso sincronizar la hora y el MQTT broker se conecta (porque igualmente se conecta si hay internet pese a que la hora tenga mal),  enviar la hora con la que está trabajando el GW en la notificación de slack para darnos cuenta con que hora está trabajando ese GW que se volvió a conectar.
+- Agregar un log para cuando el GW publique el mensaje de online, para confirmar quen publico algo al API.
+
+Entonces ¿qué pasó en sembriomar?
+según viendo los logs de sembriomar
+hipotesis: 
+1. el GW se volvió a inicializar sin haber roto el proceso. por eso no envió el OFFLINE a las notificaciones de slack.
+2. Al inicializarse el proceso del GW no tuvo internet, por tanto no pudo sincronizar su hora, y ya que el proceso no se detiene pese a que ocurrió un error al sincronizar la hora, el GW siguió trabajando.
+3. Al no tener internet no pudo publicar que estuvó ONLINE. (se puede verificar porque el MQTT imprimió un log de offline).
+4. Al tener la hora desigualada no pudo enviar lecturas de sensores ni de bateria al API.
+
+Lo que aún no tengo explicación, es que si logró suscribirse a los topics de MQTT es porque tuvó internet, entonces ¿por qué no lanzó el mensaje de ONLINE?
+
+
+
+
+
+
+22/07/21 09:58:18: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  bc/battery?ts=1626947895&battery=13.88
+22/07/21 09:58:18: [in ] 'Piscina22' 'XB-MD-322' 'AA02'  bc/battery?ts=1626947895&battery=13.55
+22/07/21 09:58:19: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  bc/battery?ts=1626947896&battery=13.67
+22/07/21 09:58:19: [in ] 'Piscina22' 'XB-MD-325' 'AA05'  bc/battery?ts=1626947896&battery=13.69
+22/07/21 09:58:19: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  bc/battery?ts=1626947896&battery=14.11
+22/07/21 09:58:19: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  bc/battery?ts=1626947896&battery=13.62
+22/07/21 09:58:19: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  bc/battery?ts=1626947896&battery=13.97
+22/07/21 09:58:20: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  bc/battery?ts=1626947896&battery=13.65
+22/07/21 09:58:24: [error] 'Piscina16' 'XB-MD-340' 'AA10' 'Route Not Found (0x25)' 
+22/07/21 09:58:29: [error] 'Piscina16' 'XB-MD-333' 'AA11' 'Route Not Found (0x25)' 
+22/07/21 09:58:33: [error] 'Piscina16' 'XB-MD-336' 'AA12' 'Route Not Found (0x25)' 
+22/07/21 09:58:38: [error] 'Piscina16' 'XB-MD-339' 'AA14' 'Route Not Found (0x25)' 
+22/07/21 09:58:42: [error] 'Piscina16' 'XB-MD-314' 'AA15' 'Route Not Found (0x25)' 
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-330' 'AA20'  bc/battery?ts=1626947920&battery=13.78
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-332' 'AA21'  bc/battery?ts=1626947920&battery=13.71
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-317' 'AA22'  bc/battery?ts=1626947921&battery=13.69
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-337' 'AA23'  bc/battery?ts=1626947920&battery=13.83
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-334' 'AA24'  bc/battery?ts=1626947920&battery=13.74
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-316' 'AA25'  bc/battery?ts=1626947920&battery=13.55
+22/07/21 09:58:43: [in ] 'Piscina19' 'XB-MD-313' 'AA26'  bc/battery?ts=1626947921&battery=13.67
+22/07/21 10:00:00: bcg:log schedule: '2021-07-22 10:00:00.002'
+22/07/21 10:00:06: bcg:log BS { temp: 26.13, oxig: 5.5, satOxig: 81.71, code: 'XB-AQ-048', datetime: '2021-07-22 10:00:00.002' }
+22/07/21 10:00:06: bcg:log BS { temp: 26.3, oxig: 2.74, satOxig: 40.91, code: 'XB-AQ-049', datetime: '2021-07-22 10:00:00.002' }
+22/07/21 10:00:06: bcg:log BS { temp: 26.86, oxig: 2.07, satOxig: 31.15, code: 'XB-AQ-052', datetime: '2021-07-22 10:00:00.002' }
+22/07/21 10:00:08: bcg:log BS { temp: 29.04, oxig: 5.61, satOxig: 87.92, code: 'XB-AQ-050', datetime: '2021-07-22 10:00:00.002' }
+22/07/21 10:01:00: bcg:log 7/22/2021, 10:01:00 AM - ready to emmit data, Bsnodes:  4
+22/07/21 10:01:01: 'XB-AQ-048' resp: 201
+22/07/21 10:01:02: 'XB-AQ-049' resp: 201
+22/07/21 10:01:02: 'XB-AQ-050' resp: 201
+22/07/21 10:01:02: 'XB-AQ-052' resp: 201
+23/04/21 17:04:35: bcg:log 
+23/04/21 17:04:35: >Init BlueControl Gateway...
+23/04/21 17:04:35: bcg:log {
+23/04/21 17:04:35:   nodeEnv: 'production',
+23/04/21 17:04:35:   api_key: undefined,
+23/04/21 17:04:35:   mqttHost: 'mqtt://broker-mqtt.bluesensor.io',
+23/04/21 17:04:35:   mqttPort: '1883',
+23/04/21 17:04:35:   bsApiUrl: 'https://apibc.bluesensor.io/v1',
+23/04/21 17:04:35:   osDateTimeApi: 'http://showcase.api.linx.twenty57.net/UnixTime/tounixtimestamp?datetime=now',
+23/04/21 17:04:35:   transmission: 'ZigBee',
+23/04/21 17:04:35:   serialport: '/dev/ttyS0',
+23/04/21 17:04:35:   baudRate: 9600,
+23/04/21 17:04:35:   apiMode: 2,
+23/04/21 17:04:35:   networkID: '',
+23/04/21 17:04:35:   address64: '',
+23/04/21 17:04:35:   name: '',
+23/04/21 17:04:35:   cron_job: '*/15 * * * *',
+23/04/21 17:04:35:   cron_job_battery: '13,28,43,58 * * * *',
+23/04/21 17:04:35:   bluegatewayName: 'gw-sembriomar-sembriomar',
+23/04/21 17:04:35:   bluegatewayPswd: undefined,
+23/04/21 17:04:35:   bluesensorGwCloud: '1',
+23/04/21 17:04:35:   bluecontrolGwCloud: '1',
+23/04/21 17:04:35:   farmId: '602cd8237c0f420006731b74',
+23/04/21 17:04:35:   address_node_test: '0013a20041ca5808',
+23/04/21 17:04:35:   data_node_test: 'MASTER/REQUEST?battery^'
+23/04/21 17:04:35: }
+23/04/21 17:04:35: bcg:log Going to set datetime to OS
+23/04/21 17:04:35: bcg:log Download of feeders and bsnodes complete!
+23/04/21 17:04:35: bcg:log init monitoring incoming packages
+23/04/21 17:04:35: 
+23/04/21 17:04:35: [*] Argvs: {
+23/04/21 17:04:35:   pond: undefined,
+23/04/21 17:04:35:   bluecontrol: undefined,
+23/04/21 17:04:35:   all: undefined,
+23/04/21 17:04:35:   file: undefined,
+23/04/21 17:04:35:   user: undefined
+23/04/21 17:04:35: }
+23/04/21 17:04:45: bcg:log offline
+23/04/21 17:04:45: bcg:error Error: getaddrinfo EAI_AGAIN showcase.api.linx.twenty57.net
+23/04/21 17:04:45:     at GetAddrInfoReqWrap.onlookup [as oncomplete] (dns.js:67:26)
+23/04/21 17:04:46: Error: Command failed: sudo date "Error: getaddrinfo EAI_AGAIN showcase.api.linx.twenty57.net"
+23/04/21 17:04:46: date: invalid date 'Error: getaddrinfo EAI_AGAIN showcase.api.linx.twenty57.net'
+23/04/21 17:04:46: 
+23/04/21 17:04:46:     at ChildProcess.exithandler (child_process.js:308:12)
+23/04/21 17:04:46:     at ChildProcess.emit (events.js:315:20)
+23/04/21 17:04:46:     at maybeClose (internal/child_process.js:1048:16)
+23/04/21 17:04:46:     at Process.ChildProcess._handle.onexit (internal/child_process.js:288:5)
+23/04/21 17:04:46: Error code:  1
+23/04/21 17:04:46: Signal received:  null
+23/04/21 17:04:55: bcg:error Request sent but no response was received from cloud
+23/04/21 17:04:55: Download data FAIL
+23/04/21 17:06:32: bcg:log Mqtt connect
+23/04/21 17:06:32: bcg:log subscribe granted: [
+23/04/21 17:06:32:   {
+23/04/21 17:06:32:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/diable/set',
+23/04/21 17:06:32:     qos: 2
+23/04/21 17:06:32:   },
+23/04/21 17:06:32:   {
+23/04/21 17:06:32:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/dayProgram/set',
+23/04/21 17:06:32:     qos: 2
+23/04/21 17:06:32:   },
+23/04/21 17:06:32:   {
+23/04/21 17:06:32:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/emptyDayProgram/set',
+23/04/21 17:06:32:     qos: 2
+23/04/21 17:06:32:   },
+23/04/21 17:06:32:   {
+23/04/21 17:06:32:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/battery/get',
+23/04/21 17:06:32:     qos: 2
+23/04/21 17:06:32:   },
+23/04/21 17:06:32:   {
+23/04/21 17:06:32:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/testFeeding',
+23/04/21 17:06:32:     qos: 2
+23/04/21 17:06:32:   }
+23/04/21 17:06:32: ]
+23/04/21 17:13:00: bcg:log schedule battery-update: '2021-04-23 17:13:00.003'
+23/04/21 17:13:04: [error] 'sin-piscina' 'XB-MD-338' 'AA16' 'Route Not Found (0x25)' 
+23/04/21 17:13:06: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:13:09: [error] 'sin-piscina' 'XB-MD-315' 'AA17' 'Route Not Found (0x25)' 
+23/04/21 17:13:10: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:13:13: [error] 'sin-piscina' 'XB-MD-335' 'AA18' 'Route Not Found (0x25)' 
+23/04/21 17:13:15: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:13:18: [error] 'sin-piscina' 'XB-MD-331' 'AA19' 'Route Not Found (0x25)' 
+23/04/21 17:13:19: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:13:24: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  bc/battery?ts=1626951376&battery=13.99
+23/04/21 17:13:26: bcg:log XB-MD-321 AA01 DESYNC
+23/04/21 17:13:26: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  >CLOUD/REQUEST?date^
+23/04/21 17:13:27: bcg:error Request sent but no response was received from cloud
+23/04/21 17:13:27: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  bc/sync?ts=1619198006&st=ok
+23/04/21 17:13:28: [error] 'Piscina22' 'XB-MD-322' 'AA02' 'Route Not Found (0x25)' 
+23/04/21 17:13:30: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:13:34: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  bc/battery?ts=1626951388&battery=13.83
+23/04/21 17:13:36: bcg:log XB-MD-323 AA03 DESYNC
+23/04/21 17:13:36: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  >CLOUD/REQUEST?date^
+23/04/21 17:13:37: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  bc/sync?ts=1619198016&st=ok
+23/04/21 17:13:37: bcg:error Request sent but no response was received from cloud
+23/04/21 17:13:39: [error] 'Piscina22' 'XB-MD-325' 'AA05' 'Route Not Found (0x25)' 
+23/04/21 17:13:40: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:13:44: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  bc/battery?ts=1626951397&battery=14.29
+23/04/21 17:13:44: bcg:log XB-MD-326 AA06 DESYNC
+23/04/21 17:13:44: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  >CLOUD/REQUEST?date^
+23/04/21 17:13:44: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  bc/sync?ts=1619198024&st=ok
+23/04/21 17:13:45: bcg:error Request sent but no response was received from cloud
+23/04/21 17:13:49: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  bc/battery?ts=1626951401&battery=13.74
+23/04/21 17:13:49: bcg:log XB-MD-327 AA07 DESYNC
+23/04/21 17:13:49: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  >CLOUD/REQUEST?date^
+23/04/21 17:13:50: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  bc/sync?ts=1619198029&st=ok
+23/04/21 17:13:50: bcg:error Request sent but no response was received from cloud
+23/04/21 17:13:53: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  bc/battery?ts=1626951406&battery=13.65
+23/04/21 17:13:53: bcg:log XB-MD-328 AA08 DESYNC
+23/04/21 17:13:54: bcg:error Request sent but no response was received from cloud
+23/04/21 17:13:55: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  >CLOUD/REQUEST?date^
+23/04/21 17:13:57: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  bc/battery?ts=1626951410&battery=13.58
+23/04/21 17:13:59: bcg:log XB-MD-329 AA09 DESYNC
+23/04/21 17:13:59: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  >CLOUD/REQUEST?date^
+23/04/21 17:14:00: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  bc/sync?ts=1619198039&st=ok
+23/04/21 17:14:00: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:02: [error] 'Piscina16' 'XB-MD-340' 'AA10' 'Route Not Found (0x25)' 
+23/04/21 17:14:02: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  bc/sync?ts=1619198035&st=ok
+23/04/21 17:14:03: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:14:06: [error] 'Piscina16' 'XB-MD-333' 'AA11' 'Route Not Found (0x25)' 
+23/04/21 17:14:08: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:14:11: [error] 'Piscina16' 'XB-MD-336' 'AA12' 'Route Not Found (0x25)' 
+23/04/21 17:14:12: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:14:15: [error] 'Piscina16' 'XB-MD-339' 'AA14' 'Route Not Found (0x25)' 
+23/04/21 17:14:17: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:14:20: [error] 'Piscina16' 'XB-MD-314' 'AA15' 'Route Not Found (0x25)' 
+23/04/21 17:14:20: [in ] 'Piscina19' 'XB-MD-330' 'AA20'  bc/battery?ts=1626951433&battery=13.92
+23/04/21 17:14:20: bcg:log XB-MD-330 AA20 DESYNC
+23/04/21 17:14:21: [in ] 'Piscina19' 'XB-MD-330' 'AA20'  >CLOUD/REQUEST?date^
+23/04/21 17:14:21: [in ] 'Piscina19' 'XB-MD-330' 'AA20'  bc/sync?ts=1619198061&st=ok
+23/04/21 17:14:21: bcg:error Request sent but no response was received from https://apibc.bluesensor.io/v1
+23/04/21 17:14:22: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:26: [in ] 'Piscina19' 'XB-MD-332' 'AA21'  bc/battery?ts=1626951437&battery=14.08
+23/04/21 17:14:28: bcg:log XB-MD-332 AA21 DESYNC
+23/04/21 17:14:28: [in ] 'Piscina19' 'XB-MD-332' 'AA21'  >CLOUD/REQUEST?date^
+23/04/21 17:14:29: [in ] 'Piscina19' 'XB-MD-332' 'AA21'  bc/sync?ts=1619198068&st=ok
+23/04/21 17:14:29: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-317' 'AA22'  bc/battery?ts=1626951446&battery=13.92
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-337' 'AA23'  bc/battery?ts=1626951445&battery=13.94
+23/04/21 17:14:32: bcg:log XB-MD-317 AA22 DESYNC
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-334' 'AA24'  bc/battery?ts=1626951445&battery=14.38
+23/04/21 17:14:32: bcg:log XB-MD-337 AA23 DESYNC
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-317' 'AA22'  >CLOUD/REQUEST?date^
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-316' 'AA25'  bc/battery?ts=1626951445&battery=13.99
+23/04/21 17:14:32: bcg:log XB-MD-334 AA24 DESYNC
+23/04/21 17:14:32: bcg:log XB-MD-316 AA25 DESYNC
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-334' 'AA24'  >CLOUD/REQUEST?date^
+23/04/21 17:14:32: [in ] 'Piscina19' 'XB-MD-337' 'AA23'  >CLOUD/REQUEST?date^
+23/04/21 17:14:33: [in ] 'Piscina19' 'XB-MD-317' 'AA22'  bc/sync?ts=1619198072&st=ok
+23/04/21 17:14:33: [in ] 'Piscina19' 'XB-MD-316' 'AA25'  >CLOUD/REQUEST?date^
+23/04/21 17:14:33: [in ] 'Piscina19' 'XB-MD-334' 'AA24'  bc/sync?ts=1619198072&st=ok
+23/04/21 17:14:33: [in ] 'Piscina19' 'XB-MD-337' 'AA23'  bc/sync?ts=1619198072&st=ok
+23/04/21 17:14:33: [in ] 'Piscina19' 'XB-MD-316' 'AA25'  bc/sync?ts=1619198073&st=ok
+23/04/21 17:14:33: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:33: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:34: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:34: bcg:error Request sent but no response was received from cloud
+23/04/21 17:14:37: [in ] 'Piscina19' 'XB-MD-313' 'AA26'  bc/battery?ts=1626951451&battery=13.99
+23/04/21 17:14:37: bcg:log XB-MD-313 AA26 DESYNC
+23/04/21 17:14:37: [in ] 'Piscina19' 'XB-MD-313' 'AA26'  >CLOUD/REQUEST?date^
+23/04/21 17:14:38: [in ] 'Piscina19' 'XB-MD-313' 'AA26'  bc/sync?ts=1619198077&st=ok
+23/04/21 17:14:38: bcg:error Request sent but no response was received from cloud
+23/04/21 17:15:00: bcg:log schedule: '2021-04-23 17:15:00.002'
+23/04/21 17:15:11: bcg:log BS { temp: 26.09, oxig: 5.63, satOxig: 83.6, code: 'XB-AQ-048', datetime: '2021-04-23 17:15:00.002' }
+23/04/21 17:15:15: bcg:log BS { temp: 27.42, oxig: 4.75, satOxig: 72.24, code: 'XB-AQ-049', datetime: '2021-04-23 17:15:00.002' }
+23/04/21 17:15:20: bcg:log BS { temp: 26.44, oxig: 5.86, satOxig: 87.62, code: 'XB-AQ-050', datetime: '2021-04-23 17:15:00.002' }
+23/04/21 17:15:24: bcg:log BS { temp: 27.33, oxig: 2.68, satOxig: 40.75, code: 'XB-AQ-052', datetime: '2021-04-23 17:15:00.002' }
+23/04/21 17:16:01: [in ] 'Piscina19' 'XB-MD-332' 'AA21'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=14.13
+23/04/21 17:16:01: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=14.24
+23/04/21 17:16:01: [in ] 'Piscina19' 'XB-MD-316' 'AA25'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=14.06
+23/04/21 17:16:01: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=13.71
+23/04/21 17:16:01: [in ] 'Piscina19' 'XB-MD-330' 'AA20'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=14.01
+23/04/21 17:16:01: [in ] 'Piscina19' 'XB-MD-317' 'AA22'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=13.85
+23/04/21 17:16:02: [in ] 'Piscina19' 'XB-MD-313' 'AA26'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=13.92
+23/04/21 17:16:02: [in ] 'Piscina19' 'XB-MD-334' 'AA24'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=14.06
+23/04/21 17:16:02: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=13.58
+23/04/21 17:16:02: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  bc/engs?ts=1619198161&st=INIT&dh=5&Batt=13.76
+23/04/21 17:16:02: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=13.81
+23/04/21 17:16:02: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:02: [in ] 'Piscina19' 'XB-MD-337' 'AA23'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=14.17
+23/04/21 17:16:02: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:02: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:02: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:03: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:05: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  bc/engs?ts=1619198160&st=INIT&dh=5&Batt=13.58
+23/04/21 17:16:07: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:18: bcg:log 4/23/2021, 5:16:18 PM - ready to emmit data, Bsnodes:  4
+23/04/21 17:16:19: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  bc/engs?ts=1619198177&st=END&dh=5&vD=null,14.23,null&cD=null,1.76,null&vE=null,14.23,null&cE=null,0.11,null
+23/04/21 17:16:19: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  bc/engs?ts=1619198177&st=END&dh=5&vD=null,13.75,null&cD=null,1.57,null&vE=null,13.76,null&cE=null,0.10,null
+23/04/21 17:16:19: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  bc/engs?ts=1619198177&st=END&dh=5&vD=null,13.57,null&cD=null,1.65,null&vE=null,13.58,null&cE=null,0.11,null
+23/04/21 17:16:19: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  bc/engs?ts=1619198177&st=END&dh=5&vD=null,13.70,null&cD=null,1.60,null&vE=null,13.71,null&cE=null,0.12,null
+23/04/21 17:16:20: bcg:error Request sent but no response was received from: https://apibc.bluesensor.io/v1
+23/04/21 17:16:20: bcg:error Request sent but no response was received from: https://apibc.bluesensor.io/v1
+23/04/21 17:16:20: bcg:error Request sent but no response was received from: https://apibc.bluesensor.io/v1
+23/04/21 17:16:20: bcg:error Request sent but no response was received from: https://apibc.bluesensor.io/v1
+23/04/21 17:16:21: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  bc/engs?ts=1619198178&st=END&dh=5&vD=null,13.80,null&cD=null,1.60,null&vE=null,13.81,null&cE=0.00,null,null
+23/04/21 17:16:21: [in ] 'Piscina19' 'XB-MD-316' 'AA25'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,14.05,null&cD=null,1.66,null&vE=null,14.06,null&cE=null,0.11,null
+23/04/21 17:16:21: [in ] 'Piscina19' 'XB-MD-330' 'AA20'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,14.00,null&cD=null,1.72,null&vE=null,14.01,null&cE=null,0.14,null
+23/04/21 17:16:22: [in ] 'Piscina19' 'XB-MD-317' 'AA22'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,13.84,null&cD=null,1.84,null&vE=null,13.84,null&cE=null,0.12,null
+23/04/21 17:16:22: [in ] 'Piscina19' 'XB-MD-313' 'AA26'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,13.91,null&cD=null,1.68,null&vE=null,13.91,null&cE=null,0.10,null
+23/04/21 17:16:22: [in ] 'Piscina19' 'XB-MD-332' 'AA21'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,14.12,null&cD=null,1.72,null&vE=null,14.12,null&cE=null,0.09,null
+23/04/21 17:16:22: [in ] 'Piscina19' 'XB-MD-334' 'AA24'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,14.05,null&cD=null,1.86,null&vE=null,14.06,null&cE=null,0.11,null
+23/04/21 17:16:22: [in ] 'Piscina19' 'XB-MD-337' 'AA23'  bc/engs?ts=1619198180&st=END&dh=5&vD=null,14.16,null&cD=null,1.72,null&vE=null,14.16,null&cE=null,0.11,null
+23/04/21 17:16:23: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  bc/engs?ts=1619198177&st=END&dh=5&vD=null,13.57,null&cD=null,1.66,null&vE=null,13.58,null&cE=null,0.10,null
+23/04/21 17:16:31: bcg:log 
+23/04/21 17:16:31: >Init BlueControl Gateway...
+23/04/21 17:16:31: bcg:log {
+23/04/21 17:16:31:   nodeEnv: 'production',
+23/04/21 17:16:31:   api_key: undefined,
+23/04/21 17:16:31:   mqttHost: 'mqtt://broker-mqtt.bluesensor.io',
+23/04/21 17:16:31:   mqttPort: '1883',
+23/04/21 17:16:31:   bsApiUrl: 'https://apibc.bluesensor.io/v1',
+23/04/21 17:16:31:   osDateTimeApi: 'http://showcase.api.linx.twenty57.net/UnixTime/tounixtimestamp?datetime=now',
+23/04/21 17:16:31:   transmission: 'ZigBee',
+23/04/21 17:16:31:   serialport: '/dev/ttyS0',
+23/04/21 17:16:31:   baudRate: 9600,
+23/04/21 17:16:31:   apiMode: 2,
+23/04/21 17:16:31:   networkID: '',
+23/04/21 17:16:31:   address64: '',
+23/04/21 17:16:31:   name: '',
+23/04/21 17:16:31:   cron_job: '*/15 * * * *',
+23/04/21 17:16:31:   cron_job_battery: '13,28,43,58 * * * *',
+23/04/21 17:16:31:   bluegatewayName: 'gw-sembriomar-sembriomar',
+23/04/21 17:16:31:   bluegatewayPswd: undefined,
+23/04/21 17:16:31:   bluesensorGwCloud: '1',
+23/04/21 17:16:31:   bluecontrolGwCloud: '1',
+23/04/21 17:16:31:   farmId: '602cd8237c0f420006731b74',
+23/04/21 17:16:31:   address_node_test: '0013a20041ca5808',
+23/04/21 17:16:31:   data_node_test: 'MASTER/REQUEST?battery^'
+23/04/21 17:16:31: }
+23/04/21 17:16:31: bcg:log Going to set datetime to OS
+23/04/21 17:16:31: bcg:log Download of feeders and bsnodes complete!
+23/04/21 17:16:31: bcg:log init monitoring incoming packages
+23/04/21 17:16:32: 
+23/04/21 17:16:32: [*] Argvs: {
+23/04/21 17:16:32:   pond: undefined,
+23/04/21 17:16:32:   bluecontrol: undefined,
+23/04/21 17:16:32:   all: undefined,
+23/04/21 17:16:32:   file: undefined,
+23/04/21 17:16:32:   user: undefined
+23/04/21 17:16:32: }
+23/04/21 17:16:33: bcg:log Mqtt connect
+23/04/21 17:16:33: bcg:error Request sent but no response was received from cloud
+23/04/21 17:16:33: Download data FAIL
+23/04/21 17:16:34: bcg:log subscribe granted: [
+23/04/21 17:16:34:   {
+23/04/21 17:16:34:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/diable/set',
+23/04/21 17:16:34:     qos: 2
+23/04/21 17:16:34:   },
+23/04/21 17:16:34:   {
+23/04/21 17:16:34:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/dayProgram/set',
+23/04/21 17:16:34:     qos: 2
+23/04/21 17:16:34:   },
+23/04/21 17:16:34:   {
+23/04/21 17:16:34:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/emptyDayProgram/set',
+23/04/21 17:16:34:     qos: 2
+23/04/21 17:16:34:   },
+23/04/21 17:16:34:   {
+23/04/21 17:16:34:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/battery/get',
+23/04/21 17:16:34:     qos: 2
+23/04/21 17:16:34:   },
+23/04/21 17:16:34:   {
+23/04/21 17:16:34:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/testFeeding',
+23/04/21 17:16:34:     qos: 2
+23/04/21 17:16:34:   }
+23/04/21 17:16:34: ]
+22/07/21 11:00:00: bcg:log schedule: '2021-07-22 11:00:00.003'
+22/07/21 11:00:06: bcg:log BS { temp: 26.1, oxig: 5.64, satOxig: 83.76, code: 'XB-AQ-048', datetime: '2021-07-22 11:00:00.003' }
+22/07/21 11:00:06: bcg:log BS { temp: 27.49, oxig: 4.82, satOxig: 73.48, code: 'XB-AQ-049', datetime: '2021-07-22 11:00:00.003' }
+22/07/21 11:00:09: bcg:log BS { temp: 26.52, oxig: 5.88, satOxig: 88.09, code: 'XB-AQ-050', datetime: '2021-07-22 11:00:00.003' }
+22/07/21 11:00:15: bcg:log BS { temp: 27.47, oxig: 2.82, satOxig: 42.89, code: 'XB-AQ-052', datetime: '2021-07-22 11:00:00.003' }
+22/07/21 11:12:48: bcg:log 
+22/07/21 11:12:48: >Init BlueControl Gateway...
+22/07/21 11:12:48: bcg:log {
+22/07/21 11:12:48:   nodeEnv: 'production',
+22/07/21 11:12:48:   api_key: undefined,
+22/07/21 11:12:48:   mqttHost: 'mqtt://broker-mqtt.bluesensor.io',
+22/07/21 11:12:48:   mqttPort: '1883',
+22/07/21 11:12:48:   bsApiUrl: 'https://apibc.bluesensor.io/v1',
+22/07/21 11:12:48:   osDateTimeApi: 'http://showcase.api.linx.twenty57.net/UnixTime/tounixtimestamp?datetime=now',
+22/07/21 11:12:48:   transmission: 'ZigBee',
+22/07/21 11:12:48:   serialport: '/dev/ttyS0',
+22/07/21 11:12:48:   baudRate: 9600,
+22/07/21 11:12:48:   apiMode: 2,
+22/07/21 11:12:48:   networkID: '',
+22/07/21 11:12:48:   address64: '',
+22/07/21 11:12:48:   name: '',
+22/07/21 11:12:48:   cron_job: '*/15 * * * *',
+22/07/21 11:12:48:   cron_job_battery: '13,28,43,58 * * * *',
+22/07/21 11:12:48:   bluegatewayName: 'gw-sembriomar-sembriomar',
+22/07/21 11:12:48:   bluegatewayPswd: undefined,
+22/07/21 11:12:48:   bluesensorGwCloud: '1',
+22/07/21 11:12:48:   bluecontrolGwCloud: '1',
+22/07/21 11:12:48:   farmId: '602cd8237c0f420006731b74',
+22/07/21 11:12:48:   address_node_test: '0013a20041ca5808',
+22/07/21 11:12:48:   data_node_test: 'MASTER/REQUEST?sync^'
+22/07/21 11:12:48: }
+22/07/21 11:12:48: bcg:log Going to set datetime to OS
+22/07/21 11:12:48: bcg:log Download of feeders and bsnodes complete!
+22/07/21 11:12:48: bcg:log init monitoring incoming packages
+22/07/21 11:12:48: 
+22/07/21 11:12:48: [*] Argvs: {
+22/07/21 11:12:48:   pond: undefined,
+22/07/21 11:12:48:   bluecontrol: undefined,
+22/07/21 11:12:48:   all: undefined,
+22/07/21 11:12:48:   file: undefined,
+22/07/21 11:12:48:   user: undefined
+22/07/21 11:12:48: }
+22/07/21 11:12:49: bcg:log Mqtt connect
+22/07/21 11:12:50: bcg:log subscribe granted: [
+22/07/21 11:12:50:   {
+22/07/21 11:12:50:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/diable/set',
+22/07/21 11:12:50:     qos: 2
+22/07/21 11:12:50:   },
+22/07/21 11:12:50:   {
+22/07/21 11:12:50:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/dayProgram/set',
+22/07/21 11:12:50:     qos: 2
+22/07/21 11:12:50:   },
+22/07/21 11:12:50:   {
+22/07/21 11:12:50:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/emptyDayProgram/set',
+22/07/21 11:12:50:     qos: 2
+22/07/21 11:12:50:   },
+22/07/21 11:12:50:   {
+22/07/21 11:12:50:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/battery/get',
+22/07/21 11:12:50:     qos: 2
+22/07/21 11:12:50:   },
+22/07/21 11:12:50:   {
+22/07/21 11:12:50:     topic: 'blueGateway/602cd8237c0f420006731b74/feeder/testFeeding',
+22/07/21 11:12:50:     qos: 2
+22/07/21 11:12:50:   }
+22/07/21 11:12:50: ]
+22/07/21 11:13:00: bcg:log schedule battery-update: '2021-07-22 11:13:00.003'
+22/07/21 11:13:04: [error] 'sin-piscina' 'XB-MD-338' 'AA16' 'Route Not Found (0x25)' 
+22/07/21 11:13:09: [error] 'sin-piscina' 'XB-MD-315' 'AA17' 'Route Not Found (0x25)' 
+22/07/21 11:13:13: [error] 'sin-piscina' 'XB-MD-335' 'AA18' 'Route Not Found (0x25)' 
+22/07/21 11:13:18: [error] 'sin-piscina' 'XB-MD-331' 'AA19' 'Route Not Found (0x25)' 
+22/07/21 11:13:19: [in ] 'Piscina22' 'XB-MD-321' 'AA01'  bc/battery?ts=1626952397&battery=14.31
+22/07/21 11:13:19: [in ] 'Piscina22' 'XB-MD-322' 'AA02'  bc/battery?ts=1626952397&battery=13.67
+22/07/21 11:13:19: [in ] 'Piscina22' 'XB-MD-323' 'AA03'  bc/battery?ts=1626952396&battery=14.04
+22/07/21 11:13:24: [error] 'Piscina22' 'XB-MD-325' 'AA05' 'Route Not Found (0x25)' 
+22/07/21 11:13:24: [in ] 'Piscina22' 'XB-MD-326' 'AA06'  bc/battery?ts=1626952403&battery=14.13
+22/07/21 11:13:24: [in ] 'Piscina22' 'XB-MD-327' 'AA07'  bc/battery?ts=1626952403&battery=14.59
+22/07/21 11:13:25: [in ] 'Piscina22' 'XB-MD-328' 'AA08'  bc/battery?ts=1626952403&battery=14.01
+22/07/21 11:13:25: [in ] 'Piscina22' 'XB-MD-329' 'AA09'  bc/battery?ts=1626952404&battery=13.71

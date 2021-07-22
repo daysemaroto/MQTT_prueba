@@ -47,9 +47,15 @@ client.on('connect', function () {
 
 client.on('offline', () => {
   console.log('offline');
-  // process.exit();
+  process.exit();
 });
 
 client.on('error', (err) => {
   console.log('err: ', err);
 });
+
+client.on('message', function (topic, message) {
+  // message is Buffer
+  console.log('topic:  ', topic, 'message:  ', message.toString())
+  //   client.end()
+})
